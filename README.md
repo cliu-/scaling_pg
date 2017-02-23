@@ -64,18 +64,6 @@ CREATE TABLE tenants
   id character varying(50) NOT NULL,
   name character varying(255) NOT NULL,
   CONSTRAINT tenants_pkey PRIMARY KEY (id)
-At a high level, Citus distributes the data across a cluster of commodity servers. Incoming SQL queries are then parallel processed across these servers.
-
-##### Our Multi-Tenant Data
-
-Let's look at a very basic SaaS schema:
-
-```SQL
-CREATE TABLE tenants
-(
-  id character varying(50) NOT NULL,
-  name character varying(255) NOT NULL,
-  CONSTRAINT tenants_pkey PRIMARY KEY (id)
 );
 
 CREATE TABLE acl
