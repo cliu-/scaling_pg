@@ -1,20 +1,20 @@
 # Scaling PostgreSQL Database
 
-___PostgreSQL___ is one of the most popular database in SaaS world. As other relational databases, PostgreSQL is designed to run on a single server in order to maintain the integrity of the dataset and support the [ACID](https://en.wikipedia.org/wiki/ACID) properties. The lack of scalability and elasticity for PostgreSQL (or other relational databases) would be a huge barrier to your SaaS.
+___PostgreSQL___ is one of the most popular database in SaaS world. As other relational databases, PostgreSQL is designed to run on a single server in order to maintain the integrity of the dataset and support the [ACID](https://en.wikipedia.org/wiki/ACID) properties. However, the lack of scalability and elasticity for PostgreSQL (or other relational databases) would be a huge barrier to your SaaS.
 
-This  artical will show you how to scale PostgreSQL database for multi-tenant SaaS applications.
+This  artical will show you how to scale PostgreSQL database from different levels.
 
 ## Questions Before Starting
 
 Before scaling, you should deeply understand the requirements from database point of view. You can try to answer the questions:
 
-- What is the expected RPS for my database?
+- What is the expected RPS (queries per second) for my database?
 - What is the actual RPS for the production?
 - The workload of my database is read-heavy or write-heavy?
-- Did you try to tune your database to obtain better performance?
-- Did you try to use cache to reduce the RPS on database? 
+- Did you try to tune your database for better performance?
+- Did you try to use cache to reduce the RPS on the database? 
 
-After answering the questions, if you still think scaling database is the only way to improve peformance, let's start it.
+After answering the questions, if you still think scaling is the only way to improve peformance, let's start it.
 
 ## Vertical Scaling
 
@@ -38,7 +38,7 @@ Load balancing works best in a scenario where there are many read-only queries h
 
  If you need a ```SELECT-intensive``` database, you can add an extra layer of ```pgpool``` to your postgresql deployment as the queries load balancer, and simply add some hot standby servers into your postgresql cluster. 
 
-To apply this scaling strategy, you do not need to change data model in current PostgreSQL database, or change source code in applications.
+To apply this scaling strategy, you do not need to change data model, or change source code in applications.
 
 #### Sharding
 
@@ -52,6 +52,18 @@ PostgreSQL does not provide built-in tool for sharding. However, nowadays, you c
 
 ![citus-basic-arch](https://github.com/cliu-/scaling_pg/blob/master/citus-basic-arch.png)
 
+At a high level, Citus distributes the data across a cluster of commodity servers. Incoming SQL queries are then parallel processed across these servers.
+
+##### Our Multi-Tenant Data
+
+Let's look at a very basic SaaS schema:
+
+```SQL
+CREATE TABLE tenants
+(
+  id character varying(50) NOT NULL,
+  name character varying(255) NOT NULL,
+  CONSTRAINT tenants_pkey PRIMARY KEY (id)
 At a high level, Citus distributes the data across a cluster of commodity servers. Incoming SQL queries are then parallel processed across these servers.
 
 ##### Our Multi-Tenant Data
@@ -89,7 +101,7 @@ CREATE TABLE item
 
 The above schema shows a simplified multi-tenant website. Every tenant has some ```acl```s and many ```item```s, each ```item``` is with reference to one ```acl```.
 
-Now, let's say we have to handle more than 500 writing-intensive queries per second on this database. We tried to [scale up](#sharding) PostgreSQL server, and tune SQL queries and PostgreSQL configuration, but still can not acheive the target. We have to scale out the PostgreSQL database with sharding strategy.
+Now, let's say we have to handle more than 500 writing queries per second on this database. We tried to [scale up](#sharding) PostgreSQL server, and tune SQL queries and PostgreSQL configuration, but still can not acheive the target. We have to scale out the PostgreSQL database with sharding strategy.
 
 Because of multi-tenant model, we can know that most of queries to postgres are merely for a particular tenant; queries joining between two or more tenants would seldom happen. 
 
@@ -115,9 +127,9 @@ Citus will divide each of three tables for us, and re-group them based on ``tena
 
 ![multi-tenant dataset after sharding](https://github.com/cliu-/scaling_pg/blob/master/multi-tenant%20dataset%20after%20sharding.jpg)
 
-SQL query is started from client side, and sent to the Citus master node initially. The master node parses the SQL statement and finds out which tenant it's querying and which worker the query should be forwarded to. The master does not deal with the SQL statements, but forward them different workers.
+SQL query is started from client side, and sent to the Citus master node initially. The master node parses the SQL statement and finds out which tenant it's querying and which worker the query should be forwarded to. The master does not deal with the SQL statements, but forwards them to different workers.
 
-Return to our case, we need to deal with more than 500 write-intensive queries per second on our postgres database. If we have a Citus cluster with some workers, the queries will be forwarded to different workers based on its ```tenantid``` for parallel processing. Will the master node be the new bottleneck? Negative. Master node plays a coordinator role in Citus cluster, it just does some slightly analysis for incoming SQL statements and then forward them to workers. If you worry about that, as well as high availability, you can easily set up multiple hot standby master nodes for load balancing by leveraging [streaming replication](#streaming-replication).
+Return to our case, we need to deal with more than 500 writing queries per second on our postgres database. If we have a Citus cluster with some workers, the queries will be forwarded to different workers based on its ```tenantid``` for parallel processing. In this way, the workload of each worker will be reduced. However, will the master node be the new bottleneck? Negative. Master node plays a coordinator role in Citus cluster, it just does some slightly analysis for incoming SQL statements and then forwards them to workers. If you worry about that, as well as high availability, you can easily set up multiple hot standby master nodes for load balancing by leveraging [streaming replication](#streaming-replication).
 
 ## In Conclusion
 
