@@ -34,7 +34,7 @@ With help of a postgres queries load balancer, we can easily distribute ```SELEC
 
 Load balancing works best in a scenario where there are many read-only queries happening at the same time.
 
-![postgresql-ha-topology1](scaling_pg/postgresql-ha-topology1.jpg)
+![postgresql-ha-topology1](https://github.com/cliu-/scaling_pg/blob/master/postgresql-ha-topology1.jpg)
 
  If you need a ```SELECT-intensive``` database, you can add an extra layer of ```pgpool``` to your postgresql deployment as the queries load balancer, and simply add some hot standby servers into your postgresql cluster. 
 
@@ -50,7 +50,7 @@ PostgreSQL does not provide built-in tool for sharding. However, nowadays, you c
 
 ##### Citus Architecture
 
-![citus-basic-arch](scaling_pg/citus-basic-arch.png)
+![citus-basic-arch](https://github.com/cliu-/scaling_pg/blob/master/citus-basic-arch.png)
 
 At a high level, Citus distributes the data across a cluster of commodity servers. Incoming SQL queries are then parallel processed across these servers.
 
@@ -101,7 +101,7 @@ The key that makes co-location happen is including the ```tenantid``` on all tab
 
 Before sharding, our data for each table looks like below.
 
-![multi-tenant dataset before sharding](scaling_pg/multi-tenant dataset before sharding.jpg)
+![multi-tenant dataset before sharding](https://github.com/cliu-/scaling_pg/blob/master/multi-tenant%20dataset%20before%20sharding.jpg)
 
 Now let's try sharding our tenant by executing below [functions](https://docs.citusdata.com/en/v6.1/reference/user_defined_functions.html). 
 
@@ -113,7 +113,7 @@ SELECT master_create_distributed_table('item', 'tenantid', 'hash');
 
 Citus will divide each of three tables for us, and re-group them based on ``tenantid``. The layout of our data should looks like below after sharding.
 
-![multi-tenant dataset after sharding](scaling_pg/multi-tenant dataset after sharding.jpg)
+![multi-tenant dataset after sharding](https://github.com/cliu-/scaling_pg/blob/master/multi-tenant%20dataset%20after%20sharding.jpg)
 
 SQL query is started from client side, and sent to the Citus master node initially. The master node parses the SQL statement and finds out which tenant it's querying and which worker the query should be forwarded to. The master does not deal with the SQL statements, but forward them different workers.
 
